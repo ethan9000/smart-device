@@ -7,7 +7,7 @@ const userName = 'ehancoc4';
 
 const device = awsIoT.device({
     keyPath: './certs/private.pem.key',
-    certPath: './certs/certificate.pem.crt', //issue stoping the file with certPath
+    certPath: '/home/pi/temp1_ehancoc4/certs/device.pem.crt',
     caPath: './certs/root-CA.crt',
     clientId: deviceName,
     host: endpointFile.endpointAddress
@@ -15,7 +15,7 @@ const device = awsIoT.device({
 
 device.on('connect', function() {
     console.log('Connected to AWS IoT');
-    checkTemp();
+    initialCheck();
 });
 
 const sensor = require('node-dht-sensor');
@@ -23,15 +23,16 @@ const sensorNumber = 11;
 const pinNumber = 4;
 
 var initialTemp;
-var normalCheck = 1000, alertCheck = 30000;
+var normalCheck = 10000, alertCheck = 30000;
 
-setTimeout(initialCheck, 1000);
-initialCheck();
 
 function initialCheck(){
     sensor.read(sensorNumber, pinNumber, (err, temperature) => {
         if (!err) {
-            return initialTemp = (temperature.toFixed(1)*1.8)+32;
+            initialTemp = (temperature.toFixed(1)*1.8)+32;
+            checkTemp();
+            console.log('Initial Temp:' + initialTemp);
+            return initialTemp;
         }
     });
 }
@@ -40,14 +41,14 @@ function checkTemp(firstTemp, latestTemp){
     if(latestTemp >= 75){
         device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
         console.log('The temp is over 75°F!\n     Temp: ' + latestTemp);
-        setTimeout(getTemp, alertCheck);
+        setTimeout(checkTemp, alertCheck);
     }else if(latestTemp >= firstTemp+3){
         device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
         console.log('Temp has increased by 3°F or more!\n     Temp: ' + latestTemp);
-        setTimeout(getTemp, alertCheck);
+        setTimeout(checkTemp, alertCheck);
     }else{
         device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
-        setTimeout(getTemp, normalCheck);
+        setTimeout(checkTemp, normalCheck);
     }
 }
 
@@ -69,5 +70,3 @@ function getTemp(){
         }
     });
 }
-
-setTimeout(getTemp, normalCheck);
