@@ -7,7 +7,7 @@ const userName = 'ehancoc4';
 
 const device = awsIoT.device({
     keyPath: './certs/private.pem.key',
-    certPath: './certs/certificate.pem.crt',
+    certPath: './certs/certificate.pem.crt', //issue stoping the file with certPath
     caPath: './certs/root-CA.crt',
     clientId: deviceName,
     host: endpointFile.endpointAddress
@@ -26,6 +26,7 @@ var initialTemp;
 var normalCheck = 1000, alertCheck = 30000;
 
 setTimeout(initialCheck, 1000);
+initialCheck();
 
 function initialCheck(){
     sensor.read(sensorNumber, pinNumber, (err, temperature) => {
