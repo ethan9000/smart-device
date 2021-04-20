@@ -7,7 +7,7 @@ const userName = 'ehancoc4';
 
 const device = awsIoT.device({
     keyPath: './certs/private.pem.key',
-    certPath: '/home/pi/temp1_ehancoc4/certs/device.pem.crt',
+    certPath: './certs/device.pem.crt',
     caPath: './certs/root-CA.crt',
     clientId: deviceName,
     host: endpointFile.endpointAddress
@@ -37,17 +37,18 @@ function initialCheck(){
     });
 }
 
-function checkTemp(firstTemp, latestTemp){
-    if(latestTemp >= 75){
-        device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
-        console.log('The temp is over 75°F!\n     Temp: ' + latestTemp);
+function checkTemp(){
+    let gotTemp = getTemp();
+    if(gotTemp.current_temp >= 75){
+        device.publish(userName + '/telemetry', JSON.stringify(gotTemp));
+        console.log('The temp is over 75°F!\n     Temp: ' + gotTemp.current_temp);
         setTimeout(checkTemp, alertCheck);
-    }else if(latestTemp >= firstTemp+3){
-        device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
-        console.log('Temp has increased by 3°F or more!\n     Temp: ' + latestTemp);
+    }else if(gotTemp.current_temp >= gotTemp.initial_temp+3){
+        device.publish(userName + '/telemetry', JSON.stringify(gotTemp));
+        console.log('Temp has increased by 3°F or more!\n     Temp: ' + gotTemp.current_temp);
         setTimeout(checkTemp, alertCheck);
     }else{
-        device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
+        device.publish(userName + '/telemetry', JSON.stringify(gotTemp));
         setTimeout(checkTemp, normalCheck);
     }
 }
@@ -65,7 +66,6 @@ function getTemp(){
                 'initial_temp': initialTemp,
                 'current_temp': far
             };
-            checkTemp(initialTemp, far);
             return message;
         }
     });
