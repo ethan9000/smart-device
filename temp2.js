@@ -13,9 +13,14 @@ redRGB = 0, //set starting value of RED variable to off (0 for common cathode)
 greenRGB = 0, //set starting value of GREEN variable to off (0 for common cathode)
 blueRGB = 0;
 
+const destinationDeviceName = 'temp1';
+
+const subTopic = 'messaging/' + deviceName;
+const pubTopic = 'messaging/' + destinationDeviceName;
+
 const device = awsIoT.device({
-    keyPath: './certs/16a39ea0ec-private.pem.key',
-    certPath: './certs/16a39ea0ec-certificate.pem.crt',
+    keyPath: './certs/483f6cd3d0-private.pem.key',
+    certPath: './certs/483f6cd3d0-certificate.pem.crt',
     caPath: './certs/AmazonRootCA1.pem.cert',
     clientId: deviceName,
     host: endpointFile.endpointAddress
@@ -24,6 +29,7 @@ const device = awsIoT.device({
 
 device.on('connect', function() {
     console.log('Connected to AWS IoT');
+    device.subscribe(subTopic);
     initialCheck();
 });
 
@@ -32,7 +38,7 @@ const sensorNumber = 11;
 const pinNumber = 4;
 
 var initialTemp;
-var normalCheck = 50000, alertCheck = 30000;
+var normalCheck = 5000, alertCheck = 30000;
 
 
 function initialCheck(){
@@ -42,6 +48,8 @@ function initialCheck(){
             checkTemp();
             console.log('Initial Temp:' + initialTemp);
             return initialTemp;
+        }else{
+            console.log('error');
         }
     });
 }
@@ -50,18 +58,28 @@ function checkTemp(){
     if(curTemp() > 70){
         console.log('temp over 70!!!');
         device.publish(userName + '/telemetry', JSON.stringify(getTemp()));
+        device.publish(pubTopic, 'True');
         setTimeout(checkTemp, alertCheck);
-        ledRed.digitalWrite(0); 
-        ledGreen.digitalWrite(1); 
-        ledBlue.digitalWrite(0);
+
     }else{
         setTimeout(checkTemp, normalCheck);
-        ledRed.digitalWrite(0); 
-        ledGreen.digitalWrite(0); 
-        ledBlue.digitalWrite(0);
+
     }
     
 }
+
+device.on('message', function(topic, message) {
+    if(message == 'True'){
+        console.log('Alert Recieved from:' + topic);
+        ledRed.digitalWrite(1); 
+        ledGreen.digitalWrite(0); 
+        ledBlue.digitalWrite(0);
+    }else{
+        ledRed.digitalWrite(0); 
+        ledGreen.digitalWrite(1); 
+        ledBlue.digitalWrite(0);
+    }
+});
 
 var far;
 
@@ -91,3 +109,14 @@ function curTemp(){
     return far;
 
 }
+
+function unexportOnClose(){
+    ledRed.digitalWrite(0); 
+    ledGreen.digitalWrite(0); 
+    ledBlue.digitalWrite(0);
+    ledRed.unexport();
+    ledGreen.unexport();
+    ledBlue.unexport();
+}
+
+process.on('SIGINT', unexportOnClose);
